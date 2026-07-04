@@ -1,0 +1,699 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// TODO: -------------------- ENUMS --------------------
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum StockStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  MANAGER
+  SUPPORT
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+enum OrderStatus {
+  PENDING // order placed, payment not yet confirmed
+  CONFIRMED // payment confirmed
+  PROCESSING // being packed
+  SHIPPED // handed to courier
+  DELIVERED // delivered to customer
+  CANCELLED // cancelled before shipping
+  REFUNDED // refund issued
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  PARTIALLY_REFUNDED
+  REFUNDED
+  FAILED
+}
+
+enum PaymentProvider {
+  STRIPE
+  JAZZCASH
+  EASYPAISA
+  // COD           // Cash on Delivery
+}
+
+enum ShippingType {
+  DOMESTIC
+  INTERNATIONAL
+}
+
+enum CouponType {
+  PERCENTAGE // e.g. 10% off
+  FIXED // e.g. Rs. 200 off
+  FREE_SHIPPING // free shipping
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ShippingRateType {
+  FLAT // flat rate regardless of weight
+  PER_KG // base rate + per kg charge
+  FREE // free shipping
+}
+
+// TODO: -------------------- MODELS --------------------
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  slug      String   @unique @db.VarChar(120)
+  imageUrl  String?  @db.Text
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Self-referencing for subcategories
+  parentId Int?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id                Int           @id @default(autoincrement())
+  name              String        @db.VarChar(255)
+  slug              String        @unique @db.VarChar(280)
+  description       String?       @db.Text
+  status            ProductStatus @default(DRAFT)
+  isFeatured        Boolean       @default(false)
+  localShippingOnly Boolean       @default(false)
+  tags              String[] // e.g. ["beginner", "professional"]
+
+  seoTitle       String? @db.VarChar(60)
+  seoDescription String? @db.VarChar(160)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  variants   ProductVariant[]
+  images     ProductImage[]
+  reviews    Review[]
+  wishlists  Wishlist[]
+  orderItems OrderItem[]
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([status])
+  @@index([isFeatured])
+  @@map("products")
+}
+
+model ProductVariant {
+  id            Int         @id @default(autoincrement())
+  label         String      @db.VarChar(100) // e.g. "1 Piece", "5 Pieces", "10 Pieces"
+  sku           String?     @unique @db.VarChar(100)
+  price         Decimal     @db.Decimal(10, 2)
+  comparePrice  Decimal?    @db.Decimal(10, 2) // original price before sale
+  stockQty      Int         @default(0)
+  lowStockAlert Int         @default(5) // alert threshold
+  stockStatus   StockStatus @default(IN_STOCK)
+  isDefault     Boolean     @default(false)
+  sortOrder     Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  inventoryLogs InventoryLog[]
+
+  @@index([productId])
+  @@index([sku])
+  @@map("product_variants")
+}
+
+model ProductImage {
+  id        Int      @id @default(autoincrement())
+  url       String   @db.Text
+  altText   String?  @db.VarChar(255)
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  // Relations
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+model InventoryLog {
+  id        Int      @id @default(autoincrement())
+  changeQty Int // positive = stock added, negative = stock removed
+  reason    String   @db.VarChar(255) // e.g. "Manual adjustment", "Order #123", "CSV import"
+  createdAt DateTime @default(now())
+
+  // Relations
+  variantId Int
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+
+  adminId Int?
+  admin   User? @relation(fields: [adminId], references: [id])
+
+  @@index([variantId])
+  @@map("inventory_logs")
+}
+
+model User {
+  id           Int          @id @default(autoincrement())
+  name         String       @db.VarChar(100)
+  email        String       @unique @db.VarChar(255)
+  passwordHash String?      @db.Text // nullable for Google OAuth users
+  role         Role         @default(CUSTOMER)
+  provider     AuthProvider @default(LOCAL)
+  googleId     String?      @unique @db.VarChar(100)
+  avatarUrl    String?      @db.Text
+
+  // Email verification
+  isEmailVerified   Boolean   @default(false)
+  emailVerifyToken  String?   @unique @db.VarChar(255)
+  emailVerifyExpiry DateTime?
+
+  // Password reset
+  passwordResetToken  String?   @unique @db.VarChar(255)
+  passwordResetExpiry DateTime?
+
+  // Refresh token (stored hashed)
+  refreshToken String? @db.Text
+
+  // Soft delete
+  isActive  Boolean   @default(true)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  addresses     Address[]
+  orders        Order[]
+  reviews       Review[]
+  wishlists     Wishlist[]
+  notifications Notification[]
+  inventoryLogs InventoryLog[]
+  cart          Cart?
+  // blogPosts       BlogPost[]
+
+  @@index([email])
+  @@index([googleId])
+  @@index([role])
+  @@map("users")
+}
+
+model Address {
+  id         Int      @id @default(autoincrement())
+  label      String   @db.VarChar(50) // e.g. "Home", "Office"
+  fullName   String   @db.VarChar(100)
+  phone      String   @db.VarChar(20)
+  street     String   @db.VarChar(255)
+  city       String   @db.VarChar(100)
+  province   String   @db.VarChar(100)
+  postalCode String?  @db.VarChar(20)
+  country    String   @default("Pakistan") @db.VarChar(100)
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  orders Order[]
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  type      String   @db.VarChar(50) // e.g. "ORDER_PLACED", "ORDER_SHIPPED", "LOW_STOCK"
+  title     String   @db.VarChar(150)
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  link      String?  @db.VarChar(255) // optional deep link e.g. "/account/orders/123"
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+model Order {
+  id          Int    @id @default(autoincrement())
+  orderNumber String @unique @db.VarChar(20) // e.g. "NCА-2026-00123"
+
+  // Status
+  status        OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(UNPAID)
+
+  // Pricing breakdown (all in PKR)
+  subtotal    Decimal @db.Decimal(10, 2)
+  shippingFee Decimal @default(0) @db.Decimal(10, 2)
+  discount    Decimal @default(0) @db.Decimal(10, 2)
+  total       Decimal @db.Decimal(10, 2)
+
+  // Coupon
+  couponCode     String?  @db.VarChar(50)
+  couponDiscount Decimal? @db.Decimal(10, 2)
+
+  // Shipping
+  shippingType   ShippingType @default(DOMESTIC)
+  trackingNumber String?      @db.VarChar(100)
+  courierName    String?      @db.VarChar(100) // e.g. "TCS", "Leopards", "DHL"
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+
+  // Address snapshot — stored so order history is accurate
+  // even if customer later edits or deletes their address
+  addressSnapshot Json
+  // snapshot shape:
+  // {
+  //   fullName, phone, street,
+  //   city, province, postalCode, country
+  // }
+
+  // Customer notes
+  customerNote String? @db.Text
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId Int? // nullable for guest orders
+  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  addressId Int? // reference kept for convenience
+  address   Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+
+  items         OrderItem[]
+  payment       Payment?
+  statusHistory OrderStatusHistory[]
+  refund        Refund?
+  reviews       Review[]
+
+  @@index([orderNumber])
+  @@index([userId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id Int @id @default(autoincrement())
+
+  // Snapshot of product at time of purchase
+  // in case product name/price changes later
+  productName  String  @db.VarChar(255)
+  variantLabel String  @db.VarChar(100) // e.g. "5 Pieces"
+  unitPrice    Decimal @db.Decimal(10, 2)
+  quantity     Int
+  subtotal     Decimal @db.Decimal(10, 2)
+
+  // Image snapshot for order history display
+  productImage String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId Int? // kept for reference, nullable in case product deleted
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  variantId Int? // kept for reference
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id        Int         @id @default(autoincrement())
+  status    OrderStatus
+  note      String?     @db.VarChar(255) // e.g. "Handed to TCS courier"
+  createdAt DateTime    @default(now())
+
+  // Relations
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  changedBy Int? // admin user id who changed status
+
+  @@index([orderId])
+  @@map("order_status_history")
+}
+
+// ─── Payment ─────────────────────────────────────────────────────────────────
+
+model Payment {
+  id          Int             @id @default(autoincrement())
+  provider    PaymentProvider
+  providerRef String?         @db.VarChar(255) // Stripe payment intent ID / JazzCash txn ID
+  amount      Decimal         @db.Decimal(10, 2)
+  currency    String          @default("PKR") @db.VarChar(10)
+  status      PaymentStatus   @default(UNPAID)
+  rawResponse Json? // full provider webhook payload stored for debugging
+  paidAt      DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // Relations
+  orderId Int   @unique
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  refund Refund?
+
+  @@index([providerRef])
+  @@index([status])
+  @@map("payments")
+}
+
+model Refund {
+  id          Int      @id @default(autoincrement())
+  amount      Decimal  @db.Decimal(10, 2)
+  reason      String   @db.Text
+  providerRef String?  @db.VarChar(255) // Stripe refund ID etc.
+  issuedAt    DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  // Relations
+  orderId Int   @unique
+  order   Order @relation(fields: [orderId], references: [id])
+
+  paymentId Int     @unique
+  payment   Payment @relation(fields: [paymentId], references: [id])
+
+  @@index([orderId])
+  @@map("refunds")
+}
+
+// ─── CART ────────────────────────────────────────────────────────────────────
+
+model Cart {
+  id        Int       @id @default(autoincrement())
+  sessionId String?   @unique @db.VarChar(255) // for guest carts
+  expiresAt DateTime? // guest carts expire after 7 days
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  userId Int?  @unique // nullable for guest carts
+  user   User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items CartItem[]
+
+  @@index([sessionId])
+  @@index([userId])
+  @@map("carts")
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  cartId Int
+  cart   Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  variantId Int
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, variantId]) // prevent duplicate variant in same cart
+  @@index([cartId])
+  @@map("cart_items")
+}
+
+// ─── COUPONS ─────────────────────────────────────────────────────────────────
+
+model Coupon {
+  id          Int        @id @default(autoincrement())
+  code        String     @unique @db.VarChar(50)
+  description String?    @db.VarChar(255)
+  type        CouponType
+  value       Decimal    @db.Decimal(10, 2) // % amount or fixed PKR amount
+  minOrderAmt Decimal?   @db.Decimal(10, 2) // minimum order to apply coupon
+  maxDiscount Decimal?   @db.Decimal(10, 2) // cap on percentage discounts
+  usesLimit   Int? // null = unlimited
+  usesCount   Int        @default(0)
+  isActive    Boolean    @default(true)
+  startsAt    DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([code])
+  @@index([isActive])
+  @@map("coupons")
+}
+
+// ─── REVIEWS ─────────────────────────────────────────────────────────────────
+
+model Review {
+  id         Int          @id @default(autoincrement())
+  rating     Int // 1 to 5
+  title      String?      @db.VarChar(150)
+  body       String       @db.Text
+  status     ReviewStatus @default(PENDING)
+  adminReply String?      @db.Text // admin response shown below review
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  // Relations
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  orderId Int? // verify purchase before allowing review
+  order   Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, productId, orderId]) // one review per product per order
+  @@index([productId])
+  @@index([status])
+  @@index([rating])
+  @@map("reviews")
+}
+
+// ─── WISHLIST ─────────────────────────────────────────────────────────────────
+
+model Wishlist {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId]) // prevent duplicates
+  @@index([userId])
+  @@map("wishlists")
+}
+
+// ─── BLOG ─────────────────────────────────────────────────────────────────────
+
+// model BlogPost {
+//   id           Int        @id @default(autoincrement())
+//   title        String     @db.VarChar(255)
+//   slug         String     @unique @db.VarChar(280)
+//   excerpt      String?    @db.VarChar(500)     // short summary for listing cards
+//   body         String     @db.Text             // markdown content
+//   coverImage   String?    @db.Text             // Cloudinary URL
+//   status       BlogStatus @default(DRAFT)
+//   publishedAt  DateTime?
+
+//   // SEO
+//   seoTitle       String?  @db.VarChar(60)
+//   seoDescription String?  @db.VarChar(160)
+
+//   // Timestamps
+//   createdAt    DateTime   @default(now())
+//   updatedAt    DateTime   @updatedAt
+
+//   // Relations
+//   authorId     Int
+//   author       User       @relation(fields: [authorId], references: [id])
+
+//   categoryId   Int
+//   category     BlogCategory @relation(fields: [categoryId], references: [id])
+
+//   tags         BlogTag[]
+
+//   @@index([slug])
+//   @@index([status])
+//   @@index([publishedAt])
+//   @@map("blog_posts")
+// }
+
+// model BlogCategory {
+//   id        Int        @id @default(autoincrement())
+//   name      String     @db.VarChar(100)
+//   slug      String     @unique @db.VarChar(120)
+//   createdAt DateTime   @default(now())
+
+//   posts     BlogPost[]
+
+//   @@map("blog_categories")
+// }
+
+// model BlogTag {
+//   id    Int    @id @default(autoincrement())
+//   name  String @unique @db.VarChar(50)
+//   slug  String @unique @db.VarChar(60)
+
+//   posts BlogPost[]
+
+//   @@map("blog_tags")
+// }
+
+// ─── SHIPPING ─────────────────────────────────────────────────────────────────
+
+model ShippingZone {
+  id        Int              @id @default(autoincrement())
+  name      String           @db.VarChar(100) // e.g. "Pakistan Domestic", "Middle East"
+  countries String[] // e.g. ["PK"] or ["AE", "SA", "QA"]
+  rateType  ShippingRateType @default(FLAT)
+  baseRate  Decimal          @default(0) @db.Decimal(10, 2)
+  perKgRate Decimal?         @db.Decimal(10, 2) // only used if rateType = PER_KG
+  minDays   Int? // estimated delivery min days
+  maxDays   Int? // estimated delivery max days
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([isActive])
+  @@map("shipping_zones")
+}
+
+// ─── BANNERS ──────────────────────────────────────────────────────────────────
+
+model Banner {
+  id        Int       @id @default(autoincrement())
+  imageUrl  String    @db.Text // Cloudinary URL
+  linkUrl   String?   @db.VarChar(255) // where clicking the banner goes
+  altText   String?   @db.VarChar(255)
+  heading   String?   @db.VarChar(150) // optional overlay heading
+  subtext   String?   @db.VarChar(255) // optional overlay subtext
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([isActive])
+  @@map("banners")
+}
+
+// ─── FAQ ──────────────────────────────────────────────────────────────────────
+
+model Faq {
+  id        Int      @id @default(autoincrement())
+  question  String   @db.VarChar(255)
+  answer    String   @db.Text
+  category  String   @db.VarChar(100) // e.g. "Ordering", "Shipping", "Products", "Returns"
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+  @@map("faqs")
+}
+
+// ─── NEWSLETTER ───────────────────────────────────────────────────────────────
+
+model NewsletterSubscriber {
+  id             Int       @id @default(autoincrement())
+  email          String    @unique @db.VarChar(255)
+  isSubscribed   Boolean   @default(true)
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+
+  @@index([email])
+  @@index([isSubscribed])
+  @@map("newsletter_subscribers")
+}
+
+// ─── CONTACT MESSAGES ─────────────────────────────────────────────────────────
+
+model ContactMessage {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(100)
+  email     String    @db.VarChar(255)
+  subject   String    @db.VarChar(255)
+  message   String    @db.Text
+  isRead    Boolean   @default(false)
+  repliedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("contact_messages")
+}
