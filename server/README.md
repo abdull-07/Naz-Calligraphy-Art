@@ -26,16 +26,3 @@ src/
 
 
 
-# Auth API Endpoints
-
-| Method | Endpoint | Auth | Description |
-| :--- | :--- | :--- | :--- |
-| **POST** | `/api/v1/auth/register` | None | Register new customer |
-| **POST** | `/api/v1/auth/login` | None | Login, returns access token |
-| **POST** | `/api/v1/auth/logout` | JWT | Logout, clears cookie |
-| **POST** | `/api/v1/auth/refresh` | Cookie | Get new access token |
-| **GET** | `/api/v1/auth/verify-email/:token` | None | Verify email |
-| **POST** | `/api/v1/auth/forgot-password` | None | Send reset email |
-| **POST** | `/api/v1/auth/reset-password` | None | Reset password |
-| **GET** | `/api/v1/auth/me` | JWT | Get current user |
-
