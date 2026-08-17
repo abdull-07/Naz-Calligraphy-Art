@@ -10,6 +10,11 @@ import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
 import { ReviewModule } from './review/review.module';
 import { PaymentModule } from './payment/payment.module';
+import { ShippingModule } from './shipping/shipping.module';
+import { BlogModule } from './blog/blog.module';
+import { NewsletterModule } from './newsletter/newsletter.module';
+import { ContactModule } from './contact/contact.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -23,7 +28,12 @@ import { PaymentModule } from './payment/payment.module';
     CartModule,
     OrderModule,
     ReviewModule,
-    PaymentModule
+    PaymentModule,
+    ShippingModule,
+    BlogModule,
+    NewsletterModule,
+    ContactModule,
+    AdminModule
   ],
 })
 export class AppModule { }
