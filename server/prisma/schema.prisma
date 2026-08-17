@@ -4,8 +4,9 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -60,7 +61,9 @@ enum PaymentProvider {
   STRIPE
   JAZZCASH
   EASYPAISA
+  HBL
   COD
+  BANK_TRANSFER
 }
 
 enum ShippingType {
@@ -151,14 +154,14 @@ model Address {
 }
 
 model Category {
-  id        Int        @id @default(autoincrement())
-  name      String     @db.VarChar(100)
-  slug      String     @unique @db.VarChar(120)
-  imageUrl  String?    @db.Text
-  sortOrder Int        @default(0)
-  isActive  Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  slug      String   @unique @db.VarChar(120)
+  imageUrl  String?  @db.Text
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   parentId Int?
   parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
@@ -320,9 +323,9 @@ model OrderItem {
   createdAt    DateTime @default(now())
 
   orderId   Int
-  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId Int?
-  product   Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
+  product   Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
   variantId Int?
   variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 
@@ -569,14 +572,14 @@ model NewsletterSubscriber {
 }
 
 model ContactMessage {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(100)
-  email     String   @db.VarChar(255)
-  subject   String   @db.VarChar(255)
-  message   String   @db.Text
-  isRead    Boolean  @default(false)
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(100)
+  email     String    @db.VarChar(255)
+  subject   String    @db.VarChar(255)
+  message   String    @db.Text
+  isRead    Boolean   @default(false)
   repliedAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@map("contact_messages")
 }
