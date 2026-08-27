@@ -1,75 +1,99 @@
-# React + TypeScript + Vite
+src/
+├── api/
+│   ├── axios.ts              → axios instance + interceptors
+│   └── endpoints/
+│       ├── auth.api.ts
+│       ├── product.api.ts
+│       ├── order.api.ts
+│       ├── user.api.ts
+│       ├── category.api.ts
+│       ├── review.api.ts
+│       ├── blog.api.ts
+│       └── admin.api.ts
+├── components/
+│   ├── ui/                   → reusable atoms
+│   │   ├── Button.tsx
+│   │   ├── Input.tsx
+│   │   ├── Modal.tsx
+│   │   ├── Table.tsx
+│   │   ├── Badge.tsx
+│   │   ├── Spinner.tsx
+│   │   ├── Pagination.tsx
+│   │   └── ConfirmDialog.tsx
+│   └── admin/                → admin-specific components
+│       ├── AdminLayout.tsx
+│       ├── AdminSidebar.tsx
+│       ├── AdminHeader.tsx
+│       └── StatCard.tsx
+├── pages/
+│   ├── admin/
+│   │   ├── Dashboard.tsx
+│   │   ├── orders/
+│   │   │   ├── OrdersList.tsx
+│   │   │   └── OrderDetail.tsx
+│   │   ├── products/
+│   │   │   ├── ProductsList.tsx
+│   │   │   ├── ProductForm.tsx
+│   │   │   └── ProductVariants.tsx
+│   │   ├── categories/
+│   │   │   └── CategoriesList.tsx
+│   │   ├── customers/
+│   │   │   ├── CustomersList.tsx
+│   │   │   └── CustomerDetail.tsx
+│   │   ├── reviews/
+│   │   │   └── ReviewsList.tsx
+│   │   ├── blog/
+│   │   │   ├── BlogList.tsx
+│   │   │   └── BlogEditor.tsx
+│   │   ├── reports/
+│   │   │   ├── RevenueReport.tsx
+│   │   │   └── SalesReport.tsx
+│   │   ├── settings/
+│   │   │   ├── BannersSettings.tsx
+│   │   │   ├── FaqSettings.tsx
+│   │   │   ├── ShippingSettings.tsx
+│   │   │   └── CouponsSettings.tsx
+│   │   └── Login.tsx
+│   └── public/               → customer-facing (Phase 2)
+├── stores/
+│   ├── auth.store.ts
+│   └── cart.store.ts
+├── hooks/
+│   ├── useAuth.ts
+│   └── useDebounce.ts
+├── types/
+│   └── index.ts
+├── utils/
+│   ├── format.ts
+│   └── cn.ts
+├── App.tsx
+└── main.tsx
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-Currently, two official plugins are available:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
+src/admin/
+├── pages/
+│   ├── Products.tsx          ← thin, just imports
+│   ├── ProductForm.tsx       ← thin, just imports
+│   └── Categories.tsx        ← thin, just imports
+└── components/
+    ├── products/
+    │   ├──
+    │   ├── 
+    │   ├──
+    │   ├──
+    │   └── form/
+    │       ├── 
+    │       ├── 
+    │       ├──
+    │       ├──
+    │       ├──
+    │       ├──
+    │       ├──
+    │       └──
+    └── categories/
+        ├──
+        ├──
+        ├──
+        └── 

@@ -31,12 +31,6 @@ export class CategoryController {
         return this.categoryService.findAll();
     }
 
-    // GET /api/v1/categories/:slug
-    @Get(':slug')
-    findOne(@Param('slug') slug: string) {
-        return this.categoryService.findBySlug(slug);
-    }
-
     // ─── ADMIN ───────────────────────────────────────────────────────────────
 
     // GET /api/v1/categories/admin/all
@@ -47,6 +41,14 @@ export class CategoryController {
         return this.categoryService.findAllAdmin();
     }
 
+    // PATCH /api/v1/categories/reorder/bulk
+    @Patch('reorder/bulk')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.ADMIN, Role.MANAGER)
+    reorder(@Body('ids') ids: number[]) {
+        return this.categoryService.reorder(ids);
+    }
+
     // POST /api/v1/categories
     @Post()
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -54,6 +56,20 @@ export class CategoryController {
     @HttpCode(HttpStatus.CREATED)
     create(@Body() dto: CreateCategoryDto) {
         return this.categoryService.create(dto);
+    }
+
+    // GET /api/v1/categories/:slug
+    @Get(':slug')
+    findOne(@Param('slug') slug: string) {
+        return this.categoryService.findBySlug(slug);
+    }
+
+    // PATCH /api/v1/categories/:id/toggle
+    @Patch(':id/toggle')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.ADMIN, Role.MANAGER)
+    toggleActive(@Param('id', ParseIntPipe) id: number) {
+        return this.categoryService.toggleActive(id);
     }
 
     // PATCH /api/v1/categories/:id
@@ -74,21 +90,5 @@ export class CategoryController {
     @HttpCode(HttpStatus.OK)
     remove(@Param('id', ParseIntPipe) id: number) {
         return this.categoryService.remove(id);
-    }
-
-    // PATCH /api/v1/categories/reorder
-    @Patch('reorder/bulk')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN, Role.MANAGER)
-    reorder(@Body('ids') ids: number[]) {
-        return this.categoryService.reorder(ids);
-    }
-
-    // PATCH /api/v1/categories/:id/toggle
-    @Patch(':id/toggle')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN, Role.MANAGER)
-    toggleActive(@Param('id', ParseIntPipe) id: number) {
-        return this.categoryService.toggleActive(id);
     }
 }

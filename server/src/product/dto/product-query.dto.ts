@@ -24,6 +24,10 @@ export class ProductQueryDto {
 
     @IsOptional()
     @IsString()
+    status?: string;
+
+    @IsOptional()
+    @IsString()
     inStock?: string;
 
     @IsOptional()

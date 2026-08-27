@@ -33,6 +33,24 @@ import { Role } from '../generated/prisma';
 export class ProductController {
     constructor(private readonly productService: ProductService) { }
 
+    // ─── ADMIN — PRODUCTS ────────────────────────────────────────────────────
+
+    // GET /api/v1/products/admin/all
+    @Get('admin/all')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.ADMIN, Role.MANAGER)
+    findAllAdmin(@Query() query: ProductQueryDto) {
+        return this.productService.findAllAdmin(query);
+    }
+
+    // GET /api/v1/products/admin/:id
+    @Get('admin/:id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.ADMIN, Role.MANAGER)
+    findOneAdmin(@Param('id', ParseIntPipe) id: number) {
+        return this.productService.findOneAdmin(id);
+    }
+
     // ─── PUBLIC ──────────────────────────────────────────────────────────────
 
     // GET /api/v1/products
@@ -45,28 +63,6 @@ export class ProductController {
     @Get(':slug')
     findOne(@Param('slug') slug: string) {
         return this.productService.findBySlug(slug);
-    }
-
-    // GET /api/v1/products/:id/variants
-    @Get(':id/variants')
-    findVariants(@Param('id', ParseIntPipe) id: number) {
-        return this.productService.findVariants(id);
-    }
-
-    // GET /api/v1/products/:id/images
-    @Get(':id/images')
-    findImages(@Param('id', ParseIntPipe) id: number) {
-        return this.productService.findImages(id);
-    }
-
-    // ─── ADMIN — PRODUCTS ────────────────────────────────────────────────────
-
-    // GET /api/v1/products/admin/all
-    @Get('admin/all')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN, Role.MANAGER)
-    findAllAdmin(@Query() query: ProductQueryDto) {
-        return this.productService.findAllAdmin(query);
     }
 
     // POST /api/v1/products
@@ -92,7 +88,7 @@ export class ProductController {
     // DELETE /api/v1/products/:id
     @Delete(':id')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
+    @Roles(Role.ADMIN, Role.MANAGER)
     @HttpCode(HttpStatus.OK)
     remove(@Param('id', ParseIntPipe) id: number) {
         return this.productService.remove(id);
