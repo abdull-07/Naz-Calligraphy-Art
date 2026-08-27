@@ -16,7 +16,7 @@ import {
   X,
   Truck,
   Mail,
-  MessageSquare,
+  // MessageSquare,
 } from 'lucide-react'
 
 interface SidebarProps {

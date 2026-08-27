@@ -256,7 +256,7 @@ export default function HomePage() {
                         Our team is available on WhatsApp for product recommendations, custom orders, and shipping queries.
                     </p>
                     <a
-                        href="https://wa.me/923001234567"
+                        href="https://wa.me/923255176697"
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: '#25D366', color: '#FFFFFF', padding: '14px 32px', borderRadius: '12px', textDecoration: 'none', fontWeight: '700', fontSize: '15px', boxShadow: '0 4px 16px rgba(37,211,102,0.3)', transition: 'all 0.2s' }}

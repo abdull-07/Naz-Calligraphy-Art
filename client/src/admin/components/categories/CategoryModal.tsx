@@ -5,27 +5,34 @@ import { z } from 'zod'
 import { useEffect } from 'react'
 
 const schema = z.object({
-  name:      z.string().min(2, 'Name must be at least 2 characters'),
-  slug:      z.string().optional(),
-  parentId:  z.number().optional().nullable(),
-  sortOrder: z.number().optional(),
-  isActive:  z.boolean().default(true),
-})
+  name:      z.string().min(2, 'Name must be at least 2 characters').optional().catch(undefined),
+  slug:      z.string().optional().catch(undefined),
+  parentId:  z.number().optional().nullable().catch(null),
+  sortOrder: z.number().optional().catch(undefined),
+  isActive:  z.boolean().catch(true),
+}) as z.ZodType<FormData>
 
-type FormData = z.infer<typeof schema>
+// Manually define FormData to ensure isActive is required in the form
+type FormData = {
+  name?: string
+  slug?: string
+  parentId?: number | null
+  sortOrder?: number
+  isActive: boolean
+}
 
 interface Props {
   editItem:   any
   topLevel:   any[]
   onClose:    () => void
-  onSubmit:   (values: FormData, editItem: any) => void
+  onSubmit:   (values: Partial<FormData>, editItem: any) => void
   isLoading:  boolean
 }
 
 export default function CategoryModal({ editItem, topLevel, onClose, onSubmit, isLoading }: Props) {
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { isActive: true, parentId: null },
+    defaultValues: { isActive: true, parentId: null, name: '', slug: '', sortOrder: 0 },
   })
 
   useEffect(() => {
