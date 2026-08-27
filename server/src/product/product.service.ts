@@ -128,10 +128,11 @@ export class ProductService {
     // ─── ADMIN — PRODUCTS ────────────────────────────────────────────────────
 
     async findAllAdmin(query: ProductQueryDto) {
-        const { search, category, page = 1, limit = 20 } = query;
+        const { search, category, status, page = 1, limit = 20 } = query;
         const skip = (page - 1) * limit;
 
         const where: any = {
+            ...(status ? { status } : { NOT: { status: 'ARCHIVED' } }),
             ...(search && {
                 OR: [
                     { name: { contains: search, mode: 'insensitive' } },
@@ -161,6 +162,19 @@ export class ProductService {
             data: products,
             meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
         };
+    }
+
+    async findOneAdmin(id: number) {
+        const product = await this.prisma.product.findUnique({
+            where: { id },
+            include: {
+                category: true,
+                images: { orderBy: { sortOrder: 'asc' } },
+                variants: { orderBy: { sortOrder: 'asc' } },
+            },
+        });
+        if (!product) throw new NotFoundException(`Product #${id} not found`);
+        return product;
     }
 
     async create(dto: CreateProductDto) {
@@ -204,12 +218,30 @@ export class ProductService {
     }
 
     async remove(id: number) {
-        const product = await this.findById(id);
+        await this.findById(id);
 
-        return this.prisma.product.update({
-            where: { id },
-            data: { status: 'ARCHIVED' },
-        });
+        try {
+            const variants = await this.prisma.productVariant.findMany({
+                where: { productId: id },
+                select: { id: true },
+            });
+            const variantIds = variants.map((v) => v.id);
+
+            if (variantIds.length > 0) {
+                await this.prisma.inventoryLog.deleteMany({
+                    where: { variantId: { in: variantIds } },
+                });
+            }
+
+            return await this.prisma.product.delete({
+                where: { id },
+            });
+        } catch {
+            return await this.prisma.product.update({
+                where: { id },
+                data: { status: 'ARCHIVED' },
+            });
+        }
     }
 
     // ─── VARIANTS ────────────────────────────────────────────────────────────

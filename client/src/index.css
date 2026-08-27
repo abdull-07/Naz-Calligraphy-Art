@@ -91,10 +91,11 @@ h1, h2, h3, h4, h5, h6 {
 
 .admin-sidebar {
   width:      260px;
-  min-height: 100vh;
+  height:     100vh;
   background: var(--color-dark);
   position:   fixed;
   top:        0;
+  bottom:     0;
   left:       0;
   z-index:    50;
   display:    flex;
@@ -582,6 +583,7 @@ tbody td {
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(201,168,76,0.3) transparent;
+  -webkit-overflow-scrolling: touch;
 }
 
 .admin-sidebar nav::-webkit-scrollbar {
@@ -591,4 +593,30 @@ tbody td {
 .admin-sidebar nav::-webkit-scrollbar-thumb {
   background: rgba(201,168,76,0.3);
   border-radius: 3px;
+}
+
+
+
+
+/* comming soon pages */
+.csp-container {
+  position: relative; /* Establishes a boundary for the child */
+  height: 400px;      /* Needs a defined height to center vertically */
+}
+
+.csc-container {
+  position: absolute;
+  font-size: xxx-large;
+  color: black;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* Pulls the item back by its own center point */
+}
+
+/* ─── SHOP RESPONSIVE ───────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .shop-sidebar    { display: none !important; }
+  .product-grid    { grid-template-columns: 1fr !important; }
+  .cart-grid       { grid-template-columns: 1fr !important; }
+  .checkout-grid   { grid-template-columns: 1fr !important; }
 }

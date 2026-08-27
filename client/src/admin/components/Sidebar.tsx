@@ -62,7 +62,7 @@ const navItems = [
     items: [
       { label: 'Reports',    icon: BarChart3,    path: '/admin/reports' },
       { label: 'Shipping',   icon: Truck,        path: '/admin/shipping' },
-      { label: 'Contact',    icon: MessageSquare, path: '/admin/contact' },
+      // { label: 'Contact',    icon: MessageSquare, path: '/admin/contact' },
       { label: 'Settings',   icon: Settings,     path: '/admin/settings' },
     ],
   },
@@ -156,6 +156,7 @@ export default function Sidebar({ collapsed, sidebarOpen, onClose }: SidebarProp
       {/* Nav */}
       <nav style={{
         flex:       1,
+        minHeight:  0,
         overflowY:  'auto',
         padding:    '12px 0',
       }}>

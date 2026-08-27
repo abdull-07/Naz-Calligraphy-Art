@@ -9,7 +9,13 @@ export const productService = {
         page?: number
         limit?: number
     }) => {
-        const { data } = await api.get('/products/admin/all', { params })
+        // ✅ remove empty string params before sending
+        const cleanParams = Object.fromEntries(
+            Object.entries(params ?? {}).filter(
+                ([_, v]) => v !== '' && v !== undefined && v !== null
+            )
+        )
+        const { data } = await api.get('/products/admin/all', { params: cleanParams })
         return data
     },
 
@@ -19,9 +25,7 @@ export const productService = {
     },
 
     getById: async (id: number) => {
-        const { data } = await api.get(`/products/admin/all`, {
-            params: { id }
-        })
+        const { data } = await api.get(`/products/admin/${id}`)
         return data
     },
 

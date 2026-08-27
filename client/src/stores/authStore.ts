@@ -42,6 +42,11 @@ export const useAuthStore = create<AuthState>()(
         accessToken: state.accessToken,
         isAuth:      state.isAuth,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.accessToken) {
+          localStorage.setItem('accessToken', state.accessToken)
+        }
+      },
     },
   ),
 )

@@ -65,7 +65,7 @@ export default function ProductForm() {
 
   const { data: productData, isLoading: productLoading } = useQuery({
     queryKey: ['product', id],
-    queryFn:  () => productService.getAll({ search: id }),
+    queryFn:  () => productService.getById(Number(id)),
     enabled:  isEdit,
   })
 
@@ -79,19 +79,26 @@ export default function ProductForm() {
       resolver: zodResolver(schema) as any,
       defaultValues: { status: 'DRAFT', isFeatured: false, localShippingOnly: false },
     })
+  const nameValue = watch('name')
 
   // auto-generate slug
-  const nameValue = watch('name')
   useEffect(() => {
     if (!isEdit && nameValue) {
-      setValue('slug', nameValue.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-'))
+      const base = nameValue
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+      // add short unique suffix to avoid conflicts
+      const unique = `${base}-${Date.now().toString(36).slice(-4)}`
+      setValue('slug', unique)
     }
   }, [nameValue, isEdit])
 
   // populate form for edit
   useEffect(() => {
-    if (isEdit && productData?.data?.[0]) {
-      const p = productData.data[0]
+    if (isEdit && productData) {
+      const p = productData
       reset({
         name:              p.name,
         slug:              p.slug,
@@ -105,9 +112,13 @@ export default function ProductForm() {
         seoDescription:    p.seoDescription ?? '',
       })
       const loadedVariants = p.variants?.map((v: any) => ({
-        id: v.id, label: v.label, sku: v.sku ?? '',
-        price: Number(v.price), comparePrice: v.comparePrice ? Number(v.comparePrice) : null,
-        stockQty: v.stockQty, isDefault: v.isDefault,
+        id:           v.id,
+        label:        v.label,
+        sku:          v.sku ?? '',
+        price:        Number(v.price),
+        comparePrice: v.comparePrice ? Number(v.comparePrice) : null,
+        stockQty:     v.stockQty,
+        isDefault:    v.isDefault,
       })) ?? []
       setVariants(loadedVariants)
       const hasMultiple = loadedVariants.length > 1
@@ -116,7 +127,7 @@ export default function ProductForm() {
       setImages(p.images ?? [])
       setSavedProductId(p.id)
     }
-  }, [productData, isEdit])
+  }, [productData, isEdit, reset])
 
   const createMutation = useMutation({
     mutationFn: productService.create,
@@ -125,7 +136,7 @@ export default function ProductForm() {
       queryClient.invalidateQueries({ queryKey: ['products'] })
       toast.success('Product created!')
     },
-    onError: () => toast.error('Failed to create product'),
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? 'Failed to create product'),
   })
 
   const updateMutation = useMutation({
@@ -133,9 +144,10 @@ export default function ProductForm() {
       productService.update(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['product', id] })
       toast.success('Product updated!')
     },
-    onError: () => toast.error('Failed to update product'),
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? 'Failed to update product'),
   })
 
   const onSubmit = async (values: FormData) => {
@@ -144,17 +156,46 @@ export default function ProductForm() {
       tags: values.tags ? values.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
     }
 
-    if (isEdit && savedProductId) {
-      updateMutation.mutate({ id: savedProductId, payload })
-    } else {
-      const created = await createMutation.mutateAsync(payload)
-      setSavedProductId(created.id)
-      for (const v of variants) {
-        await productService.createVariant(created.id, {
-          label: v.label, sku: v.sku || undefined, price: v.price,
-          comparePrice: v.comparePrice || undefined, stockQty: v.stockQty, isDefault: v.isDefault,
-        })
+    try {
+      if (isEdit && savedProductId) {
+        await updateMutation.mutateAsync({ id: savedProductId, payload })
+        for (const v of variants) {
+          if (v.id) {
+            await productService.updateVariant(savedProductId, v.id, {
+              label:        v.label,
+              sku:          v.sku || undefined,
+              price:        v.price,
+              comparePrice: v.comparePrice || undefined,
+              stockQty:     v.stockQty,
+              isDefault:    v.isDefault,
+            })
+          } else {
+            await productService.createVariant(savedProductId, {
+              label:        v.label,
+              sku:          v.sku || undefined,
+              price:        v.price,
+              comparePrice: v.comparePrice || undefined,
+              stockQty:     v.stockQty,
+              isDefault:    v.isDefault,
+            })
+          }
+        }
+      } else {
+        const created = await createMutation.mutateAsync(payload)
+        setSavedProductId(created.id)
+        for (const v of variants) {
+          await productService.createVariant(created.id, {
+            label:        v.label,
+            sku:          v.sku || undefined,
+            price:        v.price,
+            comparePrice: v.comparePrice || undefined,
+            stockQty:     v.stockQty,
+            isDefault:    v.isDefault,
+          })
+        }
       }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Failed to save product')
     }
   }
 
@@ -311,7 +352,18 @@ export default function ProductForm() {
             <div className="card" style={{ border: '1px solid #FEE2E2' }}>
               <button
                 type="button"
-                onClick={() => { if (confirm('Delete this product?')) navigate('/admin/products') }}
+                onClick={async () => {
+                  if (savedProductId && confirm('Are you sure you want to delete this product?')) {
+                    try {
+                      await productService.remove(savedProductId)
+                      queryClient.invalidateQueries({ queryKey: ['products'] })
+                      toast.success('Product deleted')
+                      navigate('/admin/products')
+                    } catch {
+                      toast.error('Failed to delete product')
+                    }
+                  }
+                }}
                 className="btn btn-danger"
                 style={{ width: '100%', justifyContent: 'center' }}
               >

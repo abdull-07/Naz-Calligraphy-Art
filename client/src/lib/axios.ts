@@ -1,13 +1,16 @@
 import axios from 'axios'
+import { useAuthStore } from '../stores/authStore'
+
+const baseURL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1'
 
 const api = axios.create({
-  baseURL:         import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1',
+  baseURL,
   withCredentials: true,
 })
 
 // attach access token to every request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken')
+  const token = useAuthStore.getState().accessToken || localStorage.getItem('accessToken')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -25,15 +28,22 @@ api.interceptors.response.use(
 
       try {
         const { data } = await axios.post(
-          `${import.meta.env.VITE_API_URL}/auth/refresh`,
+          `${baseURL}/auth/refresh`,
           {},
           { withCredentials: true },
         )
-        localStorage.setItem('accessToken', data.accessToken)
-        original.headers.Authorization = `Bearer ${data.accessToken}`
+        const newToken = data.accessToken
+        localStorage.setItem('accessToken', newToken)
+
+        const currentUser = useAuthStore.getState().user
+        if (currentUser) {
+          useAuthStore.getState().setAuth(currentUser, newToken)
+        }
+
+        original.headers.Authorization = `Bearer ${newToken}`
         return api(original)
       } catch {
-        localStorage.removeItem('accessToken')
+        useAuthStore.getState().clearAuth()
         window.location.href = '/admin/login'
       }
     }
