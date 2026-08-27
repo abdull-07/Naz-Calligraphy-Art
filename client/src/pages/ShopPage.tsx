@@ -1,14 +1,12 @@
-import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Filter, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { shopService } from '../services/shop.service'
 import ProductCard from '../components/shop/ProductCard'
 
 export default function ShopPage() {
     const [searchParams, setSearchParams] = useSearchParams()
-    const [showFilters, setShowFilters] = useState(false)
 
     const search = searchParams.get('search') ?? ''
     const category = searchParams.get('category') ?? ''
@@ -73,7 +71,7 @@ export default function ShopPage() {
                     <aside style={{
                         width: '220px',
                         flexShrink: 0,
-                        display: showFilters ? 'block' : 'block',
+                        display: 'block',
                     }}
                         className="shop-sidebar"
                     >

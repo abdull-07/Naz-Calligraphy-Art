@@ -6,7 +6,7 @@ interface Props {
   slugWatch: string
 }
 
-export default function BasicInfoSection({ register, errors, setValue, isEdit, slugWatch }: Props) {
+export default function BasicInfoSection({ register, errors }: Props) {
   return (
     <div className="card">
       <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '17px', fontWeight: '700', marginBottom: '20px', color: '#1A1A1A' }}>
