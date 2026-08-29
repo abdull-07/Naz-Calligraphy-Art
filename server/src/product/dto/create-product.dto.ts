@@ -5,6 +5,8 @@ import {
   IsArray,
   IsEnum,
   IsInt,
+  IsNumber,
+  Min,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -54,4 +56,13 @@ export class CreateProductDto {
   @IsOptional()
   @MaxLength(160)
   seoDescription?: string;
-}
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  weightKg?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  freeShipping?: boolean;
+}
