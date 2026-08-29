@@ -194,6 +194,9 @@ model Product {
   wishlists  Wishlist[]
   orderItems OrderItem[]
 
+  weightKg     Float?
+  freeShipping Boolean @default(false)
+
   @@index([slug])
   @@index([categoryId])
   @@index([status])

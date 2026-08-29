@@ -8,6 +8,8 @@ import { ShieldCheck, Truck } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useCartStore } from '../stores/cartStore'
 import { shopService } from '../services/shop.service'
+import { calculateShipping, getCourierByKey} from '../utils/shipping'
+import CourierSelector from '../components/shop/CourierSelector'
 
 const schema = z.object({
     fullName: z.string().min(2, 'Full name required'),
@@ -26,7 +28,7 @@ type FormInput = z.input<typeof schema>
 type FormData = z.output<typeof schema>
 
 const paymentOptions = [
-    { value: 'COD', label: 'Cash on Delivery', desc: 'Pay when your order arrives', icon: '💵' },
+    // { value: 'COD', label: 'Cash on Delivery', desc: 'Pay when your order arrives', icon: '💵' },
     { value: 'JAZZCASH', label: 'JazzCash', desc: 'Pay via JazzCash mobile wallet', icon: '📱' },
     { value: 'EASYPAISA', label: 'EasyPaisa', desc: 'Pay via EasyPaisa mobile wallet', icon: '📲' },
     { value: 'BANK_TRANSFER', label: 'Bank Transfer', desc: 'Transfer directly to our account', icon: '🏦' },
@@ -34,11 +36,18 @@ const paymentOptions = [
 
 export default function CheckoutPage() {
     const navigate = useNavigate()
-    const { items, subtotal, total, couponCode, couponDiscount, clearCart } = useCartStore()
+    const {
+        items, subtotal, couponCode, couponDiscount,
+        clearCart, totalWeightKg, allFreeShipping,
+        freeShipping, selectedCourier, setCourier,
+    } = useCartStore()
     const [isPlacing, setIsPlacing] = useState(false)
 
-    const shippingFee = 150
-    const grandTotal = total() + shippingFee
+    const weightKg = totalWeightKg()
+    const isFreeShip = freeShipping || allFreeShipping()
+    const shippingFee = calculateShipping(selectedCourier, weightKg, isFreeShip)
+    const grandTotal = subtotal() - couponDiscount + shippingFee
+    const courier = getCourierByKey(selectedCourier)
 
     const { register, handleSubmit, watch, formState: { errors } } = useForm<FormInput, unknown, FormData>({
         resolver: zodResolver(schema),
@@ -169,6 +178,14 @@ export default function CheckoutPage() {
                                     <label>Order Note (Optional)</label>
                                     <textarea {...register('note')} className="input" rows={2} placeholder="Special instructions for your order..." style={{ resize: 'vertical' }} />
                                 </div>
+                                <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #F3F4F6' }}>
+                                    <CourierSelector
+                                        selected={selectedCourier}
+                                        weightKg={weightKg}
+                                        freeShipping={isFreeShip}
+                                        onSelect={setCourier}
+                                    />
+                                </div>
                             </div>
 
                             {/* Payment */}
@@ -220,7 +237,7 @@ export default function CheckoutPage() {
                                         <p style={{ color: '#374151', marginBottom: '4px' }}>Account Title: <strong>Arslan Afzal</strong></p>
                                         <p style={{ color: '#374151', marginBottom: '4px' }}>IBAN: <strong>03126619439</strong></p>
                                         <p style={{ color: '#9CA3AF', marginTop: '8px', fontSize: '12px' }}>
-                                        After transfer, send screenshot to WhatsApp: +92 325 5176697
+                                            After transfer, send screenshot to WhatsApp: +92 325 5176697
                                         </p>
                                     </div>
                                 )}
@@ -238,7 +255,7 @@ export default function CheckoutPage() {
                                 {selectedPayment === 'BANK_TRANSFER' && (
                                     <div style={{ marginTop: '16px', padding: '16px', background: '#F8F4EF', borderRadius: '10px', border: '1px solid #F0EAE0', fontSize: '13px' }}>
                                         <p style={{ fontWeight: '700', color: '#1A1A1A', marginBottom: '8px' }}>Bank Account Details:</p>
-                                        <div style={{display: 'flex', gap: '24px', flexWrap: 'wrap'}}>
+                                        <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
                                             <div>
                                                 <p style={{ color: '#374151', marginBottom: '4px' }}>Bank: <strong>Meezan Bank</strong></p>
                                                 <p style={{ color: '#374151', marginBottom: '4px' }}>Account Title: <strong>Arslan Afzal</strong></p>
@@ -293,8 +310,16 @@ export default function CheckoutPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '16px', borderTop: '1px solid #F0EAE0', marginBottom: '20px' }}>
                                 {[
                                     { label: 'Subtotal', value: `Rs. ${subtotal().toLocaleString()}` },
-                                    ...(couponDiscount > 0 ? [{ label: 'Discount', value: `-Rs. ${couponDiscount.toLocaleString()}`, color: '#16A34A' }] : []),
-                                    { label: 'Shipping', value: `Rs. ${shippingFee.toLocaleString()}` },
+                                    ...(couponDiscount > 0 ? [{
+                                        label: 'Discount',
+                                        value: `-Rs. ${couponDiscount.toLocaleString()}`,
+                                        color: '#16A34A',
+                                    }] : []),
+                                    {
+                                        label: isFreeShip ? 'Shipping (Free!)' : `Shipping — ${courier?.name}`,
+                                        value: isFreeShip ? 'FREE' : `Rs. ${shippingFee.toLocaleString()}`,
+                                        color: isFreeShip ? '#16A34A' : undefined,
+                                    }
                                 ].map((row: any) => (
                                     <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                                         <span style={{ color: '#6B7280' }}>{row.label}</span>

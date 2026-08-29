@@ -5,20 +5,27 @@ import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import { useCartStore } from '../stores/cartStore'
 import { shopService } from '../services/shop.service'
+import CourierSelector from '../components/shop/CourierSelector'
+import { calculateShipping, COURIERS } from '../utils/shipping'
 
 export default function CartPage() {
     const navigate = useNavigate()
     const {
         items, updateQty, removeItem, clearCart,
-        couponCode, couponDiscount, applyCoupon, removeCoupon,
-        subtotal, total,
+        couponCode, couponDiscount, freeShipping,
+        applyCoupon, removeCoupon,
+        subtotal, totalWeightKg, allFreeShipping,
+        selectedCourier, setCourier,
     } = useCartStore()
+
+    const weightKg = totalWeightKg()
+    const isFreeShip = freeShipping || allFreeShipping()
+    const shippingFee = calculateShipping(selectedCourier, weightKg, isFreeShip)
+    const grandTotal = subtotal() - couponDiscount + shippingFee
 
     const [couponInput, setCouponInput] = useState('')
     const [couponLoading, setCouponLoading] = useState(false)
 
-    const shippingFee = 150 // domestic default
-    const grandTotal = total() + shippingFee
 
     const handleApplyCoupon = async () => {
         if (!couponInput.trim()) return
@@ -214,12 +221,37 @@ export default function CartPage() {
                             </div>
                         )}
 
+
+                        <div style={{ marginBottom: '16px' }}>
+                            <CourierSelector
+                                selected={selectedCourier}
+                                weightKg={totalWeightKg()}
+                                freeShipping={freeShipping || allFreeShipping()}
+                                onSelect={setCourier}
+                            />
+                        </div>
+
                         {/* Totals */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
                             {[
                                 { label: 'Subtotal', value: `Rs. ${subtotal().toLocaleString()}` },
-                                ...(couponDiscount > 0 ? [{ label: `Discount (${couponCode})`, value: `-Rs. ${couponDiscount.toLocaleString()}`, color: '#16A34A' }] : []),
-                                { label: 'Shipping (Domestic)', value: `Rs. ${shippingFee.toLocaleString()}` },
+                                ...(couponDiscount > 0 ? [{
+                                    label: `Discount (${couponCode})`,
+                                    value: `-Rs. ${couponDiscount.toLocaleString()}`,
+                                    color: '#16A34A',
+                                }] : []),
+                                {
+                                    label: isFreeShip
+                                        ? 'Shipping (Free!)'
+                                        : `Shipping — ${COURIERS.find(c => c.key === selectedCourier)?.name}`,
+                                    value: isFreeShip ? 'FREE' : `Rs. ${shippingFee.toLocaleString()}`,
+                                    color: isFreeShip ? '#16A34A' : undefined,
+                                },
+                                ...(weightKg > 0 && !isFreeShip ? [{
+                                    label: `Total weight`,
+                                    value: `${weightKg.toFixed(2)} KG`,
+                                    color: '#9CA3AF',
+                                }] : []),
                             ].map((row: any) => (
                                 <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                                     <span style={{ color: '#6B7280' }}>{row.label}</span>
@@ -229,7 +261,9 @@ export default function CartPage() {
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderTop: '1px solid #F0EAE0', marginTop: '4px' }}>
                                 <span style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A1A' }}>Total</span>
-                                <span style={{ fontSize: '18px', fontWeight: '700', color: '#C9A84C' }}>Rs. {grandTotal.toLocaleString()}</span>
+                                <span style={{ fontSize: '18px', fontWeight: '700', color: '#C9A84C' }}>
+                                    Rs. {grandTotal.toLocaleString()}
+                                </span>
                             </div>
                         </div>
 
