@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { shopService } from '../services/shop.service'
 import { useCartStore } from '../stores/cartStore'
 import ProductCard from '../components/shop/ProductCard'
+// import VariantsSection from '../admin/components/products/form/VariantsSection'
 
 export default function ProductPage() {
     const { slug } = useParams()
@@ -74,6 +75,8 @@ export default function ProductPage() {
             image: images[0]?.url ?? null,
             slug: product.slug,
             localShippingOnly: product.localShippingOnly,
+            freeShipping: product.freeShipping ?? false,
+            weightKg: product.weightKg ?? 0.5,
         })
 
         toast.success('Added to cart!')

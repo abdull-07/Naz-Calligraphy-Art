@@ -8,32 +8,34 @@ interface Props {
 }
 
 export default function ProductCard({ product }: Props) {
-  const addItem  = useCartStore((s) => s.addItem)
-  const variant  = product.variants?.[0]
-  const image    = product.images?.[0]?.url
-  const price    = Number(variant?.price ?? 0)
-  const compare  = Number(variant?.comparePrice ?? 0)
+  const addItem = useCartStore((s) => s.addItem)
+  const variant = product.variants?.[0]
+  const image = product.images?.[0]?.url
+  const price = Number(variant?.price ?? 0)
+  const compare = Number(variant?.comparePrice ?? 0)
   const discount = compare > price ? Math.round(((compare - price) / compare) * 100) : 0
-  const inStock  = variant?.stockStatus !== 'OUT_OF_STOCK'
+  const inStock = variant?.stockStatus !== 'OUT_OF_STOCK'
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
     if (!variant) { toast.error('Product unavailable'); return }
-    if (!inStock)  { toast.error('Out of stock'); return }
+    if (!inStock) { toast.error('Out of stock'); return }
 
     addItem({
-      variantId:         variant.id,
-      productId:         product.id,
-      productName:       product.name,
-      variantLabel:      variant.label,
+      variantId: variant.id,
+      productId: product.id,
+      productName: product.name,
+      variantLabel: variant.label,
       price,
-      comparePrice:      compare > 0 ? compare : null,
-      quantity:          1,
-      image:             image ?? null,
-      slug:              product.slug,
+      comparePrice: compare > 0 ? compare : null,
+      quantity: 1,
+      image: image ?? null,
+      slug: product.slug,
       localShippingOnly: product.localShippingOnly,
+      freeShipping: product.freeShipping ?? false,   // ← add
+      weightKg: product.weightKg ?? 0.5,          // ← add (default 0.5 KG)
     })
 
     toast.success(`${product.name} added to cart!`)
@@ -46,21 +48,21 @@ export default function ProductCard({ product }: Props) {
     >
       <div
         style={{
-          background:    '#FFFFFF',
-          borderRadius:  '16px',
-          overflow:      'hidden',
-          border:        '1px solid #F0EAE0',
-          transition:    'all 0.25s ease',
-          cursor:        'pointer',
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          border: '1px solid #F0EAE0',
+          transition: 'all 0.25s ease',
+          cursor: 'pointer',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.transform  = 'translateY(-4px)'
-          e.currentTarget.style.boxShadow  = '0 12px 32px rgba(0,0,0,0.1)'
+          e.currentTarget.style.transform = 'translateY(-4px)'
+          e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.1)'
           e.currentTarget.style.borderColor = '#C9A84C'
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.transform  = 'translateY(0)'
-          e.currentTarget.style.boxShadow  = 'none'
+          e.currentTarget.style.transform = 'translateY(0)'
+          e.currentTarget.style.boxShadow = 'none'
           e.currentTarget.style.borderColor = '#F0EAE0'
         }}
       >
@@ -142,19 +144,19 @@ export default function ProductCard({ product }: Props) {
               onClick={handleAddToCart}
               disabled={!inStock}
               style={{
-                background:    inStock ? 'linear-gradient(135deg, #C9A84C, #A8893A)' : '#F3F4F6',
-                border:        'none',
-                borderRadius:  '8px',
-                padding:       '8px 10px',
-                cursor:        inStock ? 'pointer' : 'not-allowed',
-                color:         inStock ? '#1A1A1A' : '#9CA3AF',
-                display:       'flex',
-                alignItems:    'center',
-                gap:           '5px',
-                fontWeight:    '600',
-                fontSize:      '12px',
-                transition:    'all 0.2s',
-                fontFamily:    'Inter, sans-serif',
+                background: inStock ? 'linear-gradient(135deg, #C9A84C, #A8893A)' : '#F3F4F6',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                cursor: inStock ? 'pointer' : 'not-allowed',
+                color: inStock ? '#1A1A1A' : '#9CA3AF',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontWeight: '600',
+                fontSize: '12px',
+                transition: 'all 0.2s',
+                fontFamily: 'Inter, sans-serif',
               }}
             >
               <ShoppingCart size={14} />

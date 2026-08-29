@@ -1,77 +1,81 @@
-import { useState, useEffect }      from 'react'
-import { useNavigate, useParams }   from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useForm }                  from 'react-hook-form'
-import { zodResolver }              from '@hookform/resolvers/zod'
-import { z }                        from 'zod'
-import { ArrowLeft, Trash2 }        from 'lucide-react'
-import toast                        from 'react-hot-toast'
-import { productService }           from '../services/product.service'
-import { categoryService }          from '../services/category.service'
-import BasicInfoSection             from '../components/products/form/BasicInfoSection'
-import VariantsSection              from '../components/products/form/VariantsSection'
-import ImagesSection                from '../components/products/form/ImagesSection'
-import SeoSection                   from '../components/products/form/SeoSection'
-import PublishPanel                 from '../components/products/form/PublishPanel'
-import CategoryPanel                from '../components/products/form/CategoryPanel'
-import OptionsPanel                 from '../components/products/form/OptionsPanel'
-import TagsPanel                    from '../components/products/form/TagsPanel'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { ArrowLeft, Trash2 } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { productService } from '../services/product.service'
+import { categoryService } from '../services/category.service'
+import BasicInfoSection from '../components/products/form/BasicInfoSection'
+import VariantsSection from '../components/products/form/VariantsSection'
+import ImagesSection from '../components/products/form/ImagesSection'
+import SeoSection from '../components/products/form/SeoSection'
+import PublishPanel from '../components/products/form/PublishPanel'
+import CategoryPanel from '../components/products/form/CategoryPanel'
+import OptionsPanel from '../components/products/form/OptionsPanel'
+import TagsPanel from '../components/products/form/TagsPanel'
 
 const schema = z.object({
-  name:              z.string().min(3, 'Name must be at least 3 characters'),
-  slug:              z.string().optional(),
-  description:       z.string().optional(),
-  categoryId:        z.number({ invalid_type_error: 'Select a category' }).min(1),
-  status:            z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).default('DRAFT'),
-  isFeatured:        z.boolean().default(false),
+  name: z.string().min(3, 'Name must be at least 3 characters'),
+  slug: z.string().optional(),
+  description: z.string().optional(),
+  categoryId: z.number({ invalid_type_error: 'Select a category' }).min(1),
+  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).default('DRAFT'),
+  isFeatured: z.boolean().default(false),
   localShippingOnly: z.boolean().default(false),
-  tags:              z.string().optional(),
-  seoTitle:          z.string().max(60).optional(),
-  seoDescription:    z.string().max(160).optional(),
+  tags: z.string().optional(),
+  seoTitle: z.string().max(60).optional(),
+  seoDescription: z.string().max(160).optional(),
+  weightKg: z.number().min(0).optional().nullable(),
+  freeShipping: z.boolean().default(false),
 })
 
 type FormData = z.infer<typeof schema>
 
 interface Variant {
-  id?:          number
-  label:        string
-  sku:          string
-  price:        number
+  id?: number
+  label: string
+  sku: string
+  price: number
   comparePrice: number | null
-  stockQty:     number
-  isDefault:    boolean
+  stockQty: number
+  isDefault: boolean
 }
 
 interface ProductImage {
-  id:        number
-  url:       string
+  id: number
+  url: string
   isPrimary: boolean
   sortOrder: number
 }
 
 export default function ProductForm() {
-  const { id }      = useParams()
-  const navigate    = useNavigate()
+  const { id } = useParams()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const isEdit      = !!id && id !== 'new'
+  const isEdit = !!id && id !== 'new'
+
+  const [weightKg, setWeightKg] = useState<number | null>(null)
 
   const [variants, setVariants] = useState<Variant[]>([
     { label: 'Default', sku: '', price: 0, comparePrice: null, stockQty: 0, isDefault: true },
   ])
   const [hasVariants, setHasVariants] = useState(false)
-  const [images,         setImages]         = useState<ProductImage[]>([])
-  const [uploading,      setUploading]      = useState(false)
+  const [images, setImages] = useState<ProductImage[]>([])
+  const [uploading, setUploading] = useState(false)
   const [savedProductId, setSavedProductId] = useState<number | null>(null)
 
   const { data: productData, isLoading: productLoading } = useQuery({
     queryKey: ['product', id],
-    queryFn:  () => productService.getById(Number(id)),
-    enabled:  isEdit,
+    queryFn: () => productService.getById(Number(id)),
+    enabled: isEdit,
   })
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories-all'],
-    queryFn:  categoryService.getAll,
+    queryFn: categoryService.getAll,
   })
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting } } =
@@ -99,30 +103,33 @@ export default function ProductForm() {
   useEffect(() => {
     if (isEdit && productData) {
       const p = productData
+      setWeightKg(p.weightKg ?? null)
       reset({
-        name:              p.name,
-        slug:              p.slug,
-        description:       p.description ?? '',
-        categoryId:        p.categoryId,
-        status:            p.status,
-        isFeatured:        p.isFeatured,
+        name: p.name,
+        slug: p.slug,
+        description: p.description ?? '',
+        categoryId: p.categoryId,
+        status: p.status,
+        isFeatured: p.isFeatured,
         localShippingOnly: p.localShippingOnly,
-        tags:              p.tags?.join(', ') ?? '',
-        seoTitle:          p.seoTitle ?? '',
-        seoDescription:    p.seoDescription ?? '',
+        tags: p.tags?.join(', ') ?? '',
+        seoTitle: p.seoTitle ?? '',
+        seoDescription: p.seoDescription ?? '',
+        weightKg: p.weightKg ?? null,
+        freeShipping: p.freeShipping ?? false,
       })
       const loadedVariants = p.variants?.map((v: any) => ({
-        id:           v.id,
-        label:        v.label,
-        sku:          v.sku ?? '',
-        price:        Number(v.price),
+        id: v.id,
+        label: v.label,
+        sku: v.sku ?? '',
+        price: Number(v.price),
         comparePrice: v.comparePrice ? Number(v.comparePrice) : null,
-        stockQty:     v.stockQty,
-        isDefault:    v.isDefault,
+        stockQty: v.stockQty,
+        isDefault: v.isDefault,
       })) ?? []
       setVariants(loadedVariants)
       const hasMultiple = loadedVariants.length > 1
-      const hasLabel    = loadedVariants[0]?.label && loadedVariants[0].label !== 'Default'
+      const hasLabel = loadedVariants[0]?.label && loadedVariants[0].label !== 'Default'
       setHasVariants(hasMultiple || Boolean(hasLabel))
       setImages(p.images ?? [])
       setSavedProductId(p.id)
@@ -153,6 +160,7 @@ export default function ProductForm() {
   const onSubmit = async (values: FormData) => {
     const payload = {
       ...values,
+      weightKg,
       tags: values.tags ? values.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
     }
 
@@ -162,21 +170,21 @@ export default function ProductForm() {
         for (const v of variants) {
           if (v.id) {
             await productService.updateVariant(savedProductId, v.id, {
-              label:        v.label,
-              sku:          v.sku || undefined,
-              price:        v.price,
+              label: v.label,
+              sku: v.sku || undefined,
+              price: v.price,
               comparePrice: v.comparePrice || undefined,
-              stockQty:     v.stockQty,
-              isDefault:    v.isDefault,
+              stockQty: v.stockQty,
+              isDefault: v.isDefault,
             })
           } else {
             await productService.createVariant(savedProductId, {
-              label:        v.label,
-              sku:          v.sku || undefined,
-              price:        v.price,
+              label: v.label,
+              sku: v.sku || undefined,
+              price: v.price,
               comparePrice: v.comparePrice || undefined,
-              stockQty:     v.stockQty,
-              isDefault:    v.isDefault,
+              stockQty: v.stockQty,
+              isDefault: v.isDefault,
             })
           }
         }
@@ -185,12 +193,12 @@ export default function ProductForm() {
         setSavedProductId(created.id)
         for (const v of variants) {
           await productService.createVariant(created.id, {
-            label:        v.label,
-            sku:          v.sku || undefined,
-            price:        v.price,
+            label: v.label,
+            sku: v.sku || undefined,
+            price: v.price,
             comparePrice: v.comparePrice || undefined,
-            stockQty:     v.stockQty,
-            isDefault:    v.isDefault,
+            stockQty: v.stockQty,
+            isDefault: v.isDefault,
           })
         }
       }
@@ -221,12 +229,12 @@ export default function ProductForm() {
     setVariants((prev) => [
       ...prev,
       {
-        label:        hasVariants ? '' : 'Default',
-        sku:          '',
-        price:        0,
+        label: hasVariants ? '' : 'Default',
+        sku: '',
+        price: 0,
         comparePrice: null,
-        stockQty:     0,
-        isDefault:    prev.length === 0,
+        stockQty: 0,
+        isDefault: prev.length === 0,
       },
     ])
 
@@ -344,7 +352,10 @@ export default function ProductForm() {
           <OptionsPanel
             isFeatured={watch('isFeatured')}
             localShippingOnly={watch('localShippingOnly')}
+            freeShipping={watch('freeShipping')}
+            weightKg={weightKg}
             onToggle={(key) => setValue(key, !watch(key))}
+            onWeightChange={setWeightKg}
           />
           <TagsPanel register={register} />
 
