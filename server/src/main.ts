@@ -2,13 +2,13 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
-import cookieParser from 'cookie-parser'; // ← default import
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.use(helmet());
-  app.use(cookieParser()); // ← now works
+  app.use(cookieParser());
 
   app.enableCors({
     origin: [
@@ -16,6 +16,8 @@ async function bootstrap() {
       process.env.FRONTEND_URL,
     ],
     credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id'],
   });
 
   app.setGlobalPrefix('api/v1');
@@ -26,7 +28,7 @@ async function bootstrap() {
     transform: true,
   }));
 
-  await app.listen(process.env.PORT ?? 3000);
-  console.log(`Server running on http://localhost:3000/api/v1`);
+  const Port = await app.listen(process.env.PORT ?? 3000);
+  console.log(`Server running on http://localhost:${Port}/api/v1`);
 }
 bootstrap();
