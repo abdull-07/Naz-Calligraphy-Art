@@ -12,17 +12,21 @@ import { OrderQueryDto } from './dto/order-query.dto';
 export class OrderService {
     constructor(private readonly prisma: PrismaService) { }
 
+
     // ─── CREATE ORDER ─────────────────────────────────────────────────────────
 
     async create(dto: CreateOrderDto, userId?: number) {
-        // 1. validate address
-        const address = await this.prisma.address.findFirst({
-            where: {
-                id: dto.addressId,
-                ...(userId && { userId }),
-            },
-        });
-        if (!address) throw new NotFoundException('Address not found');
+        // 1. validate address only for logged-in users with a saved address
+        let address: { id: number } | null = null;
+        if (userId && dto.addressId) {
+            address = await this.prisma.address.findFirst({
+                where: {
+                    id: dto.addressId,
+                    userId,
+                },
+            });
+            if (!address) throw new NotFoundException('Address not found');
+        }
 
         // 2. validate all variants and calculate prices
         const orderItems = await Promise.all(
@@ -124,15 +128,37 @@ export class OrderService {
         const orderNumber = await this.generateOrderNumber();
 
         // 8. create address snapshot
-        const addressSnapshot = {
-            fullName: address.fullName,
-            phone: address.phone,
-            street: address.street,
-            city: address.city,
-            province: address.province,
-            postalCode: address.postalCode,
-            country: address.country,
-        };
+        let addressSnapshot: any
+        if (userId && dto.addressId) {
+            // logged-in user with saved address
+            const address = await this.prisma.address.findFirst({
+                where: { id: dto.addressId, userId },
+            })
+            if (!address) throw new NotFoundException('Address not found')
+            addressSnapshot = {
+                fullName: address.fullName,
+                phone: address.phone,
+                street: address.street,
+                city: address.city,
+                province: address.province,
+                postalCode: address.postalCode,
+                country: address.country,
+            }
+        } else if (dto.guestInfo) {
+            // guest checkout
+            addressSnapshot = {
+                fullName: dto.guestInfo.fullName,
+                email: dto.guestInfo.email,
+                phone: dto.guestInfo.phone,
+                street: dto.guestInfo.street,
+                city: dto.guestInfo.city,
+                province: dto.guestInfo.province,
+                postalCode: dto.guestInfo.postalCode,
+                country: dto.guestInfo.country,
+            }
+        } else {
+            throw new BadRequestException('Address or guest info required')
+        }
 
         // 9. create order in transaction
         const order = await this.prisma.$transaction(async (tx) => {
@@ -141,7 +167,7 @@ export class OrderService {
                 data: {
                     orderNumber,
                     userId,
-                    addressId: address.id,
+                    addressId: address?.id ?? null,
                     addressSnapshot,
                     shippingType: dto.shippingType ?? 'DOMESTIC',
                     subtotal,
@@ -254,6 +280,19 @@ export class OrderService {
 
         if (!order) throw new NotFoundException('Order not found');
         return order;
+    }
+
+    async findGuestOrderById(orderId: number) {
+        const order = await this.prisma.order.findUnique({
+            where: { id: orderId },
+            include: {
+                items: true,
+                payment: { select: { provider: true, status: true } },
+                statusHistory: { orderBy: { createdAt: 'asc' } },
+            },
+        })
+        if (!order) throw new NotFoundException('Order not found')
+        return order
     }
 
     // ─── ADMIN ───────────────────────────────────────────────────────────────
