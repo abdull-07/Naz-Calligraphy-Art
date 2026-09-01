@@ -42,18 +42,30 @@ export const shopService = {
     placeOrder: async (payload: {
         items: { variantId: number; quantity: number }[]
         addressId?: number
+        guestInfo?: {
+            fullName: string
+            email: string
+            phone: string
+            street: string
+            city: string
+            province: string
+            postalCode?: string
+            country: string
+        }
         shippingType: string
         paymentProvider: string
         couponCode?: string
         customerNote?: string
-        guestInfo?: { name: string; email: string; phone: string; address: any }
+        courierName?: string
+        shippingFee?: number
     }) => {
         const { data } = await api.post('/orders', payload)
         return data
     },
 
-    getOrderConfirmation: async (id: number) => {
-        const { data } = await api.get(`/orders/my/${id}`)
+    // Guest order confirmation — no auth needed
+    getGuestOrder: async (id: number) => {
+        const { data } = await api.get(`/orders/${id}/guest`)
         return data
     },
 }
