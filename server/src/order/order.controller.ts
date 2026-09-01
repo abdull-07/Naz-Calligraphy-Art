@@ -29,7 +29,7 @@ export class OrderController {
 
     // POST /api/v1/orders
     @Post()
-    @UseGuards(JwtAuthGuard)
+    // @UseGuards(JwtAuthGuard)
     @HttpCode(HttpStatus.CREATED)
     create(
         @Body() dto: CreateOrderDto,
@@ -97,5 +97,10 @@ export class OrderController {
         @CurrentUser('id') adminId: number,
     ) {
         return this.orderService.updateStatus(orderId, dto, adminId);
+    }
+
+    @Get(':id/guest')
+    findGuestOrder(@Param('id', ParseIntPipe) orderId: number) {
+        return this.orderService.findGuestOrderById(orderId)
     }
 }
